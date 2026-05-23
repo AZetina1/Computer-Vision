@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Acceso Táctico & Mando Central</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @keyframes scan {
+            0%, 100% { border-color: rgba(6, 182, 212, 0.2); box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.1); }
+            50% { border-color: rgba(147, 51, 234, 0.8); box-shadow: inset 0 0 20px rgba(147, 51, 234, 0.3), 0 0 15px rgba(147, 51, 234, 0.2); }
+        }
+        .scanning-effect { animation: scan 2s infinite ease-in-out; }
+        .mic-listening { animation: pulse-mic 1.2s infinite ease-in-out; }
+        @keyframes pulse-mic {
+            0%, 100% { transform: scale(1); background-color: rgba(147, 51, 234, 0.2); }
+            50% { transform: scale(1.05); background-color: rgba(147, 51, 234, 0.4); }
+        }
+    </style>
+</head>
+<body class="bg-radial from-slate-950 via-black to-slate-950 flex items-center justify-center min-h-screen text-slate-200 font-sans antialiased overflow-y-auto p-4">
+
+    <div id="loginCard" class="w-full max-w-md p-8 bg-slate-900/30 border border-slate-800/80 rounded-3xl backdrop-blur-2xl shadow-2xl transition-all duration-500 my-auto">
+        
+        <div class="flex bg-slate-950/80 p-1 rounded-xl mb-6 border border-slate-800/60 text-xs font-semibold uppercase tracking-wider">
+            <button id="tabLogin" class="w-1/2 py-2.5 rounded-lg text-cyan-400 bg-slate-900 border border-slate-800/50 cursor-pointer transition-all">Login</button>
+            <button id="tabRegister" class="w-1/2 py-2.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer transition-all">Registrar ID</button>
+        </div>
+
+        <h1 id="mainTitle" class="text-xl font-bold text-white text-center mb-1">Terminal de Acceso Seguro</h1>
+        <p id="mainSubtitle" class="text-xs text-slate-400 text-center mb-6">Presente credenciales de la Máquina Principal</p>
+
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">ID Único de Usuario</label>
+                <input type="text" id="username" placeholder="ej. alpha_one" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-cyan-500 transition-colors">
+            </div>
+            
+            <div id="registerFields" class="hidden space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Nombre Completo</label>
+                    <input type="text" id="fullname" placeholder="ej. Carlos Mendoza" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Grado Jerárquico / Rango</label>
+                    <select id="rank" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500 transition-colors">
+                        <option value="Director de Operaciones">Director de Operaciones</option>
+                        <option value="Comandante de Ciberseguridad">Comandante de Ciberseguridad</option>
+                        <option value="Ingeniero de Sistemas Senior">Ingeniero de Sistemas Senior</option>
+                        <option value="Analista de Inteligencia">Analista de Inteligencia</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden border-2 border-slate-800 bg-slate-950 flex items-center justify-center" id="cameraContainer">
+            <video id="webcam" autoplay muted playsinline class="w-full h-full object-cover hidden scale-x-[-1]"></video>
+            <div id="faceTarget" class="absolute w-32 h-32 border border-dashed border-cyan-500/30 rounded-full hidden pointer-events-none"></div>
+            
+            <div id="placeholderIcon" class="text-slate-700">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor" class="w-12 h-12 animate-pulse"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+            </div>
+
+            <div id="voiceOverlay" class="absolute inset-0 bg-slate-950/95 flex flex-col items-center justify-center hidden">
+                <div id="micCircle" class="w-12 h-12 rounded-full flex items-center justify-center text-purple-400 mb-2 border border-purple-500/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" /></svg>
+                </div>
+                <div class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">DI: "ENTRAR" u "ABRE"</div>
+                <div id="voiceTranscript" class="text-[11px] text-purple-400 mt-1 italic">Escuchando...</div>
+            </div>
+
+            <div id="statusOverlay" class="absolute inset-0 bg-slate-950/80 flex items-center justify-center hidden">
+                <div class="text-cyan-400 font-bold text-[10px] tracking-widest uppercase animate-pulse" id="statusText">PROCESANDO...</div>
+            </div>
+        </div>
+
+        <canvas id="canvas" class="hidden" width="200" height="200"></canvas>
+
+        <div class="space-y-3">
+            <button id="btnStart" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl text-xs tracking-wider uppercase transition-all cursor-pointer">Activar Dispositivo Óptico</button>
+            <button id="btnAction" class="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white font-semibold rounded-xl text-xs tracking-wider uppercase transition-all cursor-pointer hidden">Escanear Rostro</button>
+        </div>
+
+        <p id="systemMessage" class="text-[11px] text-slate-500 text-center mt-4 min-h-[16px] font-medium"></p>
+    </div>
+
+    <div id="dashboard" class="hidden w-full max-w-4xl p-2 transition-all duration-1000 transform scale-95 opacity-0 flex flex-col gap-6 my-auto">
+        
+        <div class="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl relative overflow-hidden backdrop-blur-xl shadow-xl">
+            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-500 via-purple-500 to-emerald-500"></div>
+            
+            <div class="flex flex-col sm:flex-row items-center gap-6 justify-between">
+                <div class="text-center sm:text-left">
+                    <span id="badgeRank" class="px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-bold uppercase tracking-widest rounded-md">RANGO</span>
+                    <h2 id="badgeName" class="text-2xl md:text-3xl font-extrabold text-white tracking-tight mt-2">Nombre del Operador</h2>
+                    <p class="text-xs text-slate-400 mt-1">Terminal de Control: <span id="badgeID" class="text-slate-300 font-mono"></span></p>
+                </div>
+                <button onclick="window.location.reload()" class="px-4 py-2 bg-slate-900 border border-slate-800 hover:bg-red-950/20 hover:text-red-400 text-[11px] font-bold text-slate-400 rounded-xl transition-all cursor-pointer uppercase tracking-wider">Bloquear Máquina</button>
+            </div>
+
+            <hr class="border-slate-800/60 my-5">
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="p-4 bg-black/40 border border-slate-900 rounded-xl">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Método de Validación</div>
+                    <div id="dashMethod" class="text-emerald-400 font-bold text-xs mt-1">Biometría Facial</div>
+                </div>
+                <div class="p-4 bg-black/40 border border-slate-900 rounded-xl">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hora de Acceso</div>
+                    <div id="loginTime" class="text-white font-medium text-xs mt-1">-</div>
+                </div>
+                <div class="p-4 bg-black/40 border border-slate-900 rounded-xl">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nivel de Privilegios</div>
+                    <div class="text-cyan-400 font-bold text-xs mt-1">Root / Consola Principal</div>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-800/80 pt-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wider">Lista de Prioridades Pendientes</h3>
+                        <p class="text-[11px] text-slate-500">Asuntos críticos pendientes en la Máquina Principal</p>
+                    </div>
+                    <span id="taskCounter" class="px-2 py-0.5 bg-slate-950 border border-slate-800 rounded-md text-[10px] font-mono text-cyan-400">0 Pendientes</span>
+                </div>
+
+                <div id="taskList" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+
+                <div class="mt-4 flex gap-2">
+                    <input type="text" id="newTaskInput" placeholder="Añadir nuevo asunto crítico a la consola..." class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition-colors">
+                    <select id="newTaskPriority" class="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-cyan-500">
+                        <option value="CRÍTICA">CRÍTICA</option>
+                        <option value="ALTA">ALTA</option>
+                        <option value="MEDIA">MEDIA</option>
+                    </select>
+                    <button id="btnAddTask" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs rounded-xl tracking-wide uppercase transition-all cursor-pointer">+</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const faceTarget = document.getElementById('faceTarget');
+        const placeholderIcon = document.getElementById('placeholderIcon');
+        const statusOverlay = document.getElementById('statusOverlay');
+        const systemMessage = document.getElementById('systemMessage');
+        
+        const usernameInput = document.getElementById('username');
+        const fullnameInput = document.getElementById('fullname');
+        const rankInput = document.getElementById('rank');
+        const registerFields = document.getElementById('registerFields');
+        
+        const btnStart = document.getElementById('btnStart');
+        const btnAction = document.getElementById('btnAction');
+        const tabLogin = document.getElementById('tabLogin');
+        const tabRegister = document.getElementById('tabRegister');
+        
+        const voiceOverlay = document.getElementById('voiceOverlay');
+        const micCircle = document.getElementById('micCircle');
+        const voiceTranscript = document.getElementById('voiceTranscript');
+        const loginCard = document.getElementById('loginCard');
+        const dashboard = document.getElementById('dashboard');
+        
+        const taskList = document.getElementById('taskList');
+        const taskCounter = document.getElementById('taskCounter');
+        const newTaskInput = document.getElementById('newTaskInput');
+        const newTaskPriority = document.getElementById('newTaskPriority');
+        const btnAddTask = document.getElementById('btnAddTask');
+
+        let currentMode = 'verify';
+        const BACKEND_URL = "http://127.0.0.1:8000";
+        
+        let priorities = [
+            { id: 1, text: "Auditar registros de acceso inusuales en el nodo central de red.", priority: "CRÍTICA" },
+            { id: 2, text: "Actualizar parches de seguridad del motor de reconocimiento biométrico local.", priority: "ALTA" },
+            { id: 3, text: "Verificar espacio y depurar respaldos en base de datos cifrada.", priority: "MEDIA" }
+        ];
+
+        // Cambios entre Pestañas
+        tabLogin.addEventListener('click', () => {
+            currentMode = 'verify';
+            tabLogin.className = "w-1/2 py-2.5 rounded-lg text-cyan-400 bg-slate-900 border border-slate-800/50 cursor-pointer transition-all";
+            tabRegister.className = "w-1/2 py-2.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer transition-all";
+            registerFields.classList.add('hidden');
+            btnAction.textContent = "Escanear Rostro";
+            btnAction.className = "w-full py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white font-semibold rounded-xl text-xs tracking-wider uppercase transition-all cursor-pointer";
+        });
+
+        tabRegister.addEventListener('click', () => {
+            currentMode = 'register';
+            tabRegister.className = "w-1/2 py-2.5 rounded-lg text-purple-400 bg-slate-900 border border-slate-800/50 cursor-pointer transition-all";
+            tabLogin.className = "w-1/2 py-2.5 rounded-lg text-slate-500 hover:text-slate-300 cursor-pointer transition-all";
+            registerFields.classList.remove('hidden');
+            btnAction.textContent = "Registrar Credenciales";
+            btnAction.className = "w-full py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold rounded-xl text-xs tracking-wider uppercase transition-all cursor-pointer";
+        });
+
+        // Control de Cámara
+        btnStart.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 400, facingMode: "user" } });
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                placeholderIcon.classList.add('hidden');
+                faceTarget.classList.remove('hidden');
+                cameraContainer.classList.add('scanning-effect');
+                btnStart.classList.add('hidden');
+                btnAction.classList.remove('hidden');
+            } catch (err) {
+                systemMessage.textContent = "Error de hardware óptico.";
+                systemMessage.className = "text-xs text-red-400 text-center mt-4";
+            }
+        });
+
+        function captureStrictFaceZone() {
+            const context = canvas.getContext('2d');
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
+            const sourceX = (video.videoWidth - 250) / 2;
+            const sourceY = (video.videoHeight - 250) / 2;
+            context.drawImage(video, sourceX, sourceY, 250, 250, 0, 0, canvas.width, canvas.height);
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            return canvas.toDataURL('image/jpeg');
+        }
+
+        // Peticiones al Servidor
+        btnAction.addEventListener('click', async () => {
+            const username = usernameInput.value.trim();
+            if (!username) {
+                systemMessage.textContent = "ID de usuario requerido.";
+                systemMessage.className = "text-[11px] text-amber-400 text-center mt-4 font-medium";
+                return;
+            }
+
+            statusOverlay.classList.remove('hidden');
+            const imageBase64 = captureStrictFaceZone();
+
+            if (currentMode === 'register') {
+                const fullname = fullnameInput.value.trim();
+                const rank = rankInput.value;
+                if (!fullname) {
+                    statusOverlay.classList.add('hidden');
+                    systemMessage.textContent = "Se requiere el Nombre Completo.";
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, fullname, rank, image_base64: imageBase64 })
+                    });
+                    const result = await response.json();
+                    statusOverlay.classList.add('hidden');
+                    if (!response.ok) throw new Error(result.detail);
+                    
+                    systemMessage.textContent = result.message;
+                    systemMessage.className = "text-[11px] text-purple-400 text-center mt-4 font-medium";
+                } catch (e) {
+                    statusOverlay.classList.add('hidden');
+                    systemMessage.textContent = e.message;
+                    systemMessage.className = "text-[11px] text-red-400 text-center mt-4 font-medium";
+                }
+            } else {
+                try {
+                    const response = await fetch(`${BACKEND_URL}/verify`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, image_base64: imageBase64 })
+                    });
+                    const result = await response.json();
+                    statusOverlay.classList.add('hidden');
+                    if (!response.ok) throw new Error(result.detail);
+
+                    if (result.verified) {
+                        grantAccess(username, result.fullname, result.rank, "Biometría Facial");
+                    } else {
+                        startVoiceBackup(username);
+                    }
+                } catch (e) {
+                    statusOverlay.classList.add('hidden');
+                    startVoiceBackup(username);
+                }
+            }
+        });
+
+        // Plan B: Autenticación por voz
+        async function startVoiceBackup(username) {
+            let userRank = "Operador Autorizado";
+            let userFullname = username;
+            try {
+                const res = await fetch(`${BACKEND_URL}/user/${username}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    userRank = data.rank;
+                    userFullname = data.fullname;
+                } else {
+                    systemMessage.textContent = "ID de credencial no registrado.";
+                    systemMessage.className = "text-xs text-red-400 text-center mt-4";
+                    return;
+                }
+            } catch (err) {
+                systemMessage.textContent = "Error de enlace con servidor.";
+                return;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                systemMessage.textContent = `Falla facial. Navegador incompatible con voz.`;
+                return;
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'es-ES';
+
+            voiceOverlay.classList.remove('hidden');
+            micCircle.classList.add('mic-listening');
+            systemMessage.textContent = "Anomalía facial. Verifique identidad por voz.";
+            systemMessage.className = "text-xs text-amber-500 text-center mt-4";
+
+            recognition.start();
+
+            recognition.onresult = (event) => {
+                const command = event.results[0][0].transcript.toLowerCase().trim();
+                voiceTranscript.textContent = `Escuchado: "${command}"`;
+
+                if (command.includes('entrada') || command.includes('entrar') || command.includes('abre')) {
+                    recognition.stop();
+                    grantAccess(username, userFullname, userRank, "Voz (Plan B)");
+                } else {
+                    recognition.stop();
+                    voiceOverlay.classList.add('hidden');
+                    systemMessage.textContent = "Comando incorrecto. Acceso revocado.";
+                    systemMessage.className = "text-xs text-red-400 text-center mt-4";
+                }
+            };
+        }
+
+        function grantAccess(id, fullname, rank, metodo) {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            loginCard.classList.add('scale-95', 'opacity-0');
+            
+            setTimeout(() => {
+                loginCard.classList.add('hidden');
+                
+                document.getElementById('badgeRank').textContent = rank;
+                document.getElementById('badgeName').textContent = fullname;
+                document.getElementById('badgeID').textContent = `@${id}`;
+                document.getElementById('dashMethod').textContent = metodo;
+                
+                const now = new Date();
+                document.getElementById('loginTime').textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                renderTasks();
+                
+                dashboard.classList.remove('hidden');
+                setTimeout(() => {
+                    dashboard.classList.replace('scale-95', 'scale-100');
+                    dashboard.classList.replace('opacity-0', 'opacity-100');
+                }, 50);
+            }, 500);
+        }
+
+        // --- LÓGICA DE LA LISTA DE PRIORIDADES ---
+        function renderTasks() {
+            taskList.innerHTML = "";
+            taskCounter.textContent = `${priorities.length} Asuntos`;
+
+            if (priorities.length === 0) {
+                taskList.innerHTML = `<div class="text-center text-xs py-4 text-slate-600 italic">No hay prioridades críticas pendientes en la terminal.</div>`;
+                return;
+            }
+
+            priorities.forEach(task => {
+                let badgeColor = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+                if (task.priority === "CRÍTICA") badgeColor = "bg-red-500/10 text-red-400 border-red-500/20";
+                if (task.priority === "ALTA") badgeColor = "bg-amber-500/10 text-amber-500 border-amber-500/20";
+
+                const taskItem = document.createElement('div');
+                taskItem.className = "flex items-center justify-between p-3 bg-slate-950/60 border border-slate-900 rounded-xl hover:border-slate-800 transition-colors";
+                taskItem.innerHTML = `
+                    <div class="flex items-center gap-3 pr-2">
+                        <span class="px-2 py-0.5 border text-[9px] font-bold rounded ${badgeColor}">${task.priority}</span>
+                        <p class="text-xs text-slate-300 font-medium">${task.text}</p>
+                    </div>
+                    <button onclick="resolveTask(${task.id})" class="px-2 py-1 bg-emerald-950/30 hover:bg-emerald-950/80 border border-emerald-900/40 text-emerald-400 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer">Resolver</button>
+                `;
+                taskList.appendChild(taskItem);
+            });
+        }
+
+        // Añadir Tarea Operativa
+        btnAddTask.addEventListener('click', () => {
+            const text = newTaskInput.value.trim();
+            const priority = newTaskPriority.value;
+            if (!text) return;
+
+            priorities.push({
+                id: Date.now(),
+                text: text,
+                priority: priority
+            });
+
+            newTaskInput.value = "";
+            renderTasks();
+        });
+
+        newTaskInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') btnAddTask.click();
+        });
+
+        // RESOLVER TAREA: Asegurar que esté asignada explícitamente al objeto window
+        window.resolveTask = function(id) {
+            priorities = priorities.filter(task => task.id !== id);
+            renderTasks();
+        };
+    </script>
+</body>
+</html>
